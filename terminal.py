@@ -6,7 +6,7 @@ import termios, fcntl, struct, sys, os
 import signal
 import threading
 import time
-from collections import Counter
+from collections import Counter, defaultdict
 
 if sys.version_info.major == 3:
     unicode = str
@@ -17,6 +17,9 @@ CSI = '\033'
 CARD_CHAR = '▊'
 SUBSCRIPT_NUMBERS = '₀₁₂₃₄₅₆₇₈₉'
 HL, VL, UL, UR, LL, LR, UT, LT = '─', '│', '┌', '┐', '└', '┘', '┬', '┴'
+CARD_TRANSLATION_DICT = defaultdict(lambda: CARD_CHAR)  # Dictionary that translates cards colors to unicode characters
+CARD_TRANSLATION_DICT.update({ 'wild': '⁇',     # alternative '⍰'
+                               '+2': '⇈' })
 
 if sys.version_info.major == 2:
     # python2 doesn't understand unicode literals and from __future__ import unicode_literals
@@ -26,6 +29,8 @@ if sys.version_info.major == 2:
     SUBSCRIPT_NUMBERS = unicode('₀₁₂₃₄₅₆₇₈₉', encoding='utf-8')
     HL, VL, UL, UR, LL, LR, UT, LT = [unicode(c, encoding='utf-8') for c in ('─', '│', '┌', '┐', '└', '┘', '┬', '┴')]
     EMPTY = unicode('')
+    CARD_TRANSLATION_DICT.update({ 'wild': unicode('⁇', encoding='utf-8'),
+                                   '+2': unicode('⇈', encoding='utf-8') })
 
 class ColoredString(object):
     def __init__(self, string, foreground=None, background=None):
@@ -98,7 +103,7 @@ def color(foreground=None, background=None):
                'green': '071',
                'pink': '212',
                'wild': '201',
-               '+2': '255' }
+               '+2': '008' }
 
     ret_foreground = ''
     ret_background = ''
@@ -516,7 +521,7 @@ class Piles(object):
         self.refresh()
 
     def refresh(self):
-        global CARD_CHAR
+        global CARD_CHAR, CARD_TRANSLATION_DICT
         self.term.erase()
 
         for i,p in enumerate(self.piles):
@@ -527,7 +532,7 @@ class Piles(object):
 
             for c in counted:
                 # if there is more than one card of a particular color, display a subscript number of how many cards there are
-                card_in_color = ColoredString(CARD_CHAR, c)
+                card_in_color = ColoredString(CARD_TRANSLATION_DICT[c], c)
                 number_of_cards = num_to_subscript(str(counted[c]))
                 card_list.append(card_in_color)
                 if counted[c] > 1:
